@@ -1,0 +1,12 @@
+# Never commit a real config — it carries the Jellyfin API key.
+jf-precache.conf
+/etc/
+# Build artifacts
+*.pkg.tar.zst
+*.tar.gz
+pkg/
+src/
+
+# Python
+__pycache__/
+*.pyc

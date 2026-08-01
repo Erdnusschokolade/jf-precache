@@ -1,0 +1,20 @@
+[Unit]
+Description=Jellyfin Playback Precache Hook
+Documentation=https://github.com/Erdnusschokolade/jf-precache
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/jf-precache
+Restart=always
+RestartSec=5
+User=root
+Group=root
+# Logs go to stdout and thus into the journal; the <N> prefix is read as the
+# syslog priority.
+SyslogIdentifier=jf-precache
+# Give running dd/tar reads time to be cancelled cleanly on stop.
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

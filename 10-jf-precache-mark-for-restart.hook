@@ -1,0 +1,22 @@
+# Mark the running service for a restart when the package is upgraded.
+#
+# Arch deliberately does not restart services on upgrades. systemd's own
+# 35-systemd-enqueue-marked.hook does run "systemctl enqueue-marked", which
+# restarts every unit carrying the "needs-restart" marker — but the marker has
+# to be set beforehand, so we set it PreTransaction (same pattern as
+# 10-openssh-mark-sshd-for-restart.hook from the base system).
+#
+# Per the D-Bus API, enqueue-marked is equivalent to TryRestartUnit(): a
+# deliberately stopped service stays stopped. No AbortOnFail, so an upgrade
+# inside a chroot (no running systemd) does not fail on this line.
+
+[Trigger]
+Operation = Upgrade
+Type = Package
+Target = jf-precache
+
+[Action]
+Depends = systemd
+Description = Marking jf-precache.service for restart...
+When = PreTransaction
+Exec = /usr/bin/systemctl --runtime set-property jf-precache.service Markers=needs-restart

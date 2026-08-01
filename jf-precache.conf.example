@@ -1,0 +1,77 @@
+# jf-precache configuration.
+#
+# Install location: /etc/jf-precache/jf-precache.conf
+# This file holds the Jellyfin API key -> keep it root-only:
+#   install -Dm600 jf-precache.conf.example /etc/jf-precache/jf-precache.conf
+#   chmod 600 /etc/jf-precache/jf-precache.conf
+#
+# Every value can also be overridden by an environment variable (JF_URL,
+# JF_API_KEY, JF_BS, JF_RUNS, JF_WEBHOOK, JF_LISTEN_HOST, JF_LISTEN_PORT,
+# JF_POLL_INTERVAL, JF_TRICKPLAY, JF_KEEPWARM, JF_KEEPWARM_INTERVAL,
+# JF_KEEPWARM_RUNTIME_FACTOR, JF_REQUIRE_SESSION, JF_API_TIMEOUT), e.g. via a
+# systemd drop-in.
+#
+# Logs go to stdout and therefore into the journal: journalctl -u jf-precache
+
+[jf-precache]
+# Base URL of the Jellyfin server (local loopback is fine when co-located).
+jf_url = http://127.0.0.1:8096
+
+# Jellyfin API key (Admin -> API Keys). REQUIRED. Never commit the real key.
+# Used for PlaybackInfo (resolving the file path) and Sessions (is it still
+# playing?) — both are read-only calls.
+api_key =
+
+# dd block size for the sequential reads (good range: 8M–64M).
+bs = 64M
+
+# Sequential passes over the file. 2–3 promotes the blocks into the ARC's MFU
+# list; a single pass only lands them in the more evictable MRU list.
+runs = 3
+
+# Listen for Jellyfin's playback webhook. This is the fast path: it fires the
+# moment playback starts, which is exactly when precaching is worth the most.
+webhook = yes
+
+# Webhook listen address. Keep on loopback unless Jellyfin runs elsewhere.
+listen_host = 127.0.0.1
+listen_port = 9000
+
+# Additionally (or instead) ask the Sessions API every N seconds who is playing.
+# 0 = off. Set this if you would rather not configure the webhook plugin at all
+# (webhook = no), or leave the webhook on and use polling as a safety net for
+# playbacks whose webhook never arrived. The cost is one request per interval;
+# the drawback as a replacement is latency — up to one interval passes before a
+# new playback is noticed. 30 is a sensible value.
+poll_interval = 0
+
+# Also warm the <name>.trickplay directory (the scrubbing thumbnails) via
+# tar | dd, both on precache and in every keep-warm pass. Off by default: if
+# those images already live on an SSD, pulling them into the ARC only costs
+# space the media file wants. Turn on when trickplay sits on the same pool.
+trickplay = no
+
+# Keep the file warm while playback is running: re-read it once per interval so
+# the blocks keep their recency in MFU instead of decaying over a whole movie.
+# Reads are skipped while playback is paused and stop when it ends.
+keepwarm = yes
+
+# Seconds between keep-warm passes (2–5 minutes is sensible). This is a lower
+# bound: if a pass turns out slow — meaning it came from the pool, not from the
+# ARC — the wait is stretched so that at most ~25% of the wall clock is spent
+# reading, and after three such passes the file is given up on entirely.
+keepwarm_interval = 180
+
+# How long a file may be kept warm, as a multiple of the media's own runtime.
+# A fixed number cannot fit both a 20 minute episode and an extended cut; 1.5x
+# leaves room for pausing and rewinding. If Jellyfin reports no runtime at all
+# (live TV), there is no budget and the session alone decides when to stop.
+keepwarm_runtime_factor = 1.5
+
+# Only precache what the Sessions API confirms is actually playing. Protects
+# against webhook templates that also fire on stop/progress events. If Jellyfin
+# cannot be reached the check is skipped rather than blocking the precache.
+require_active_session = yes
+
+# Timeout in seconds for a single Jellyfin API call.
+api_timeout = 5
