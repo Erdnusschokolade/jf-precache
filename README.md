@@ -1,10 +1,11 @@
 # jf-precache
 
-A small webhook service that sequentially reads a media file a few times when
-Jellyfin starts playing it, so the data ends up in the filesystem cache in
-RAM — the **ZFS ARC** on ZFS, the regular **Linux page cache** everywhere else
-(ext4, XFS, Btrfs, …). Scrubbing and seeking are then served from RAM instead
-of the spinning disks.
+A RAM cache for Jellyfin playback: when playback starts, this small webhook
+service prefetches the media file by reading it sequentially a few times, so
+it lands in the filesystem cache in RAM — the **ZFS ARC** on ZFS, the regular
+**Linux page cache** everywhere else (ext4, XFS, Btrfs, …) — and keeps it warm
+while you watch. Seeking and scrubbing are then served instantly from RAM
+instead of the spinning hard drives.
 
 Two to three sequential read passes promote the blocks into the
 "frequently used" part of the cache (the ARC's **MFU** list on ZFS, the active
